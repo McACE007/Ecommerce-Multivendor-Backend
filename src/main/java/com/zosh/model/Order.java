@@ -1,7 +1,6 @@
 package com.zosh.model;
 
 import com.zosh.domain.OrderStatus;
-import com.zosh.domain.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode
+@Table(name = "orders")
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,8 +43,6 @@ public class Order {
     private OrderStatus orderStatus;
 
     private int totalItem;
-
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     private LocalDateTime orderDate = LocalDateTime.now();
 
