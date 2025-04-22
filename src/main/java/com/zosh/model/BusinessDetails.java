@@ -10,4 +10,13 @@ public class BusinessDetails {
     private String businessAddress;
     private String logo;
     private String banner;
+
+    public BusinessDetails() {
+        businessName = "";
+        businessEmail = "";
+        businessMobile = "";
+        businessAddress = "";
+        logo = "";
+        banner = "";
+    }
 }
