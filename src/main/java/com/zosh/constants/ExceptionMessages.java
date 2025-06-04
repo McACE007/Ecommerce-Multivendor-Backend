@@ -9,4 +9,8 @@ public class ExceptionMessages {
     public final static String INVALID_OTP = "The OTP you entered is incorrect. Please try again.";
     public final static String PRODUCT_NOT_FOUND_USER = "Product not found";
     public final static String PRODUCT_NOT_FOUND_DEV = "Product lookup failed: productId '{}' does not exist";
+    public final static String USER_NOT_FOUND_USER = "User not found";
+    public final static String USER_NOT_FOUND_EMAIL_DEV = "User lookup failed: email '{}' does not exist";
+    public final static String USER_ALREADY_EXISTS_DEV = "User creation failed: email '{}' already exists";
+    public final static String USER_ALREADY_EXISTS_USER = "A user with this email already exists. Please use a different email";
 }

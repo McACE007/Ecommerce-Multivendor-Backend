@@ -1,17 +1,20 @@
 package com.zosh.service;
 
+import com.zosh.constants.ExceptionMessages;
 import com.zosh.domain.USER_ROLE;
+import com.zosh.exception.SellerAlreadyExistsException;
+import com.zosh.exception.UserAlreadyExistsException;
 import com.zosh.model.*;
 import com.zosh.repository.CartRepo;
 import com.zosh.repository.SellerRepo;
 import com.zosh.repository.UserRepo;
-import com.zosh.repository.VerificationCodeRepo;
 import com.zosh.request.LoginRequest;
 import com.zosh.request.SignupRequest;
 import com.zosh.response.ApiResponse;
 import com.zosh.response.AuthResponse;
-import com.zosh.utils.OtpUtil;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -27,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -34,51 +38,36 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CartRepo cartRepo;
     private final JwtService jwtService;
-    private final VerificationCodeRepo verificationCodeRepo;
     private final EmailService emailService;
     private final UserDetailsService userDetailsService;
     private final SellerService sellerService;
     private final SellerRepo sellerRepo;
+    private final VerificationCodeService verificationCodeService;
+
     private static final String SELLER_PREFIX = "seller_";
 
-    public ApiResponse sentOtp(String email) throws Exception {
-        VerificationCode verificationCode = verificationCodeRepo.findByEmail(email);
-
-        if (verificationCode != null) {
-            verificationCodeRepo.delete(verificationCode);
-        }
-
-        String otp = OtpUtil.generateOtp();
-
-        verificationCode = new VerificationCode();
-        verificationCode.setEmail(email);
-        verificationCode.setOtp(otp);
-        verificationCodeRepo.save(verificationCode);
+    public ApiResponse sentOtp(String email) throws MessagingException {
+        String otp = verificationCodeService.generateOTP(email);
 
         String subject = "zosh bazaar login/signup otp";
         String text = "your login/signup otp is - ";
 
         emailService.sendVerificationOtpEmail(email.startsWith(SELLER_PREFIX) ? email.substring(SELLER_PREFIX.length()) : email, otp, subject, text);
 
-        ApiResponse response = new ApiResponse();
-        response.setMessage("otp send successfully");
-
-        return response;
+        return ApiResponse.builder().message("otp send successfully").build();
     }
 
-    public AuthResponse signup(SignupRequest request) throws Exception {
-        VerificationCode verificationCode = verificationCodeRepo.findByEmail(request.getEmail());
-
-        if (verificationCode == null || !verificationCode.getOtp().equals(request.getOtp()))
-            throw new Exception("wrong otp...");
+    public AuthResponse signup(SignupRequest request) throws SellerAlreadyExistsException, UserAlreadyExistsException {
+        verificationCodeService.verifyOTP(request.getOtp());
 
         Authentication authentication = null;
         List<GrantedAuthority> authorities = new ArrayList<>();
 
         if (request.getEmail().startsWith(SELLER_PREFIX)) {
-            Seller seller = sellerRepo.findByEmail(request.getEmail());
-            if (seller != null)
-                throw new Exception("Seller already exists");
+            sellerRepo.findByEmail(request.getEmail()).ifPresent(existingSeller -> {
+                log.error(ExceptionMessages.SELLER_ALREADY_EXISTS_DEV, existingSeller.getEmail());
+                throw new SellerAlreadyExistsException(ExceptionMessages.SELLER_ALREADY_EXISTS_USER);
+            });
 
             Seller newSeller = new Seller();
             newSeller.setEmail(request.getEmail());
@@ -95,10 +84,10 @@ public class AuthService {
             authorities.add(new SimpleGrantedAuthority(newSeller.getRole().toString()));
             authentication = new UsernamePasswordAuthenticationToken(savedSeller.getEmail(), null, authorities);
         } else {
-            User user = userRepo.findByEmail(request.getEmail());
-
-            if (user != null)
-                throw new Exception("User already exists");
+            userRepo.findByEmail(request.getEmail()).ifPresent(existingUser -> {
+                log.error(ExceptionMessages.USER_ALREADY_EXISTS_DEV, existingUser.getEmail());
+                throw new UserAlreadyExistsException(ExceptionMessages.USER_ALREADY_EXISTS_USER);
+            });
 
             User newUser = new User();
             newUser.setEmail(request.getEmail());
@@ -149,12 +138,7 @@ public class AuthService {
         if (userDetails == null)
             throw new BadCredentialsException("Invalid email");
 
-        VerificationCode verificationCode = verificationCodeRepo.findByEmail(username);
-
-        if (verificationCode == null || !verificationCode.getOtp().equals(otp))
-            throw new BadCredentialsException("Wrong otp");
-
-        verificationCodeRepo.delete(verificationCode);
+        verificationCodeService.verifyOTPWithEmail(username);
 
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }

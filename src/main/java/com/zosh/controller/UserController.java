@@ -1,5 +1,6 @@
 package com.zosh.controller;
 
+import com.zosh.exception.UserNotFoundException;
 import com.zosh.model.User;
 import com.zosh.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/profile")
-    public ResponseEntity<User> getUserProfile(Authentication authentication) throws Exception {
+    public ResponseEntity<User> getUserProfile(Authentication authentication) throws UserNotFoundException {
         String email = authentication.getName();
         User user = userService.findUserByEmail(email);
         return ResponseEntity.status(HttpStatus.OK).body(user);
