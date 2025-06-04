@@ -1,14 +1,17 @@
 package com.zosh.controller;
 
 import com.zosh.domain.AccountStatus;
+import com.zosh.exception.InvalidOTPException;
+import com.zosh.exception.SellerNotFoundException;
 import com.zosh.model.Seller;
 import com.zosh.model.VerificationCode;
-import com.zosh.repository.VerificationCodeRepo;
 import com.zosh.service.AuthService;
 import com.zosh.service.SellerService;
+import com.zosh.service.VerificationCodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,31 +22,24 @@ import java.util.List;
 public class SellerController {
     private final SellerService sellerService;
     private final AuthService authService;
-    private final VerificationCodeRepo verificationCodeRepo;
+    private final VerificationCodeService verificationCodeService;
 
     @PatchMapping("/verify/{otp}")
-    public ResponseEntity<Seller> verifySellerEmail(@PathVariable String otp) throws Exception {
-        VerificationCode verificationCode = verificationCodeRepo.findByOtp(otp);
-
-        if (verificationCode == null || !verificationCode.getOtp().equals(otp))
-            throw new Exception("Wrong otp");
-
+    public ResponseEntity<Seller> verifySellerEmail(@PathVariable String otp) throws InvalidOTPException {
+        VerificationCode verificationCode = verificationCodeService.verifyOTP(otp);
         Seller seller = sellerService.verifyEmail(verificationCode.getEmail(), otp);
-
         return ResponseEntity.ok(seller);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Seller> getSellerById(@PathVariable Long id) throws Exception {
+    public ResponseEntity<Seller> getSellerById(@PathVariable Long id) throws SellerNotFoundException {
         Seller seller = sellerService.getSellerById(id);
         return ResponseEntity.ok(seller);
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<Seller> getSellerByToken(Authentication authentication) throws Exception {
-        String email = authentication.getName();
-        Seller seller = sellerService.getSellerByEmail(email);
-        return ResponseEntity.ok(seller);
+    public ResponseEntity<Seller> getSellerByToken(@AuthenticationPrincipal UserDetails userDetails) throws SellerNotFoundException {
+        return ResponseEntity.ok(sellerService.getSellerByEmail(userDetails.getUsername()));
     }
 
     @GetMapping
@@ -53,17 +49,15 @@ public class SellerController {
     }
 
     @PatchMapping
-    public ResponseEntity<Seller> updateSeller(Authentication authentication, @RequestBody Seller seller) throws Exception {
-        Seller sellerProfile = sellerService.getSellerProfile(authentication);
+    public ResponseEntity<Seller> updateSeller(@AuthenticationPrincipal UserDetails userDetails, @RequestBody Seller seller) throws SellerNotFoundException {
+        Seller sellerProfile = sellerService.getSellerByEmail(userDetails.getUsername());
         Seller updatedSeller = sellerService.updateSeller(sellerProfile.getId(), seller);
         return ResponseEntity.ok(updatedSeller);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSeller(@PathVariable Long id) throws Exception {
+    public ResponseEntity<Void> deleteSeller(@PathVariable Long id) throws SellerNotFoundException {
         sellerService.deleteSeller(id);
         return ResponseEntity.noContent().build();
     }
-
-    
 }
