@@ -37,6 +37,8 @@ public class Product {
 
     private Integer numRatings;
 
+    private String stock;
+
     @ManyToOne
     private Category category;
 

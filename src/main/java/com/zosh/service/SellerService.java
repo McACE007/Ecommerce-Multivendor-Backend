@@ -1,8 +1,8 @@
 package com.zosh.service;
 
+import com.zosh.constants.ExceptionMessages;
 import com.zosh.domain.AccountStatus;
 import com.zosh.domain.USER_ROLE;
-import com.zosh.exception.ExceptionMessages;
 import com.zosh.exception.SellerAlreadyExistsException;
 import com.zosh.exception.SellerNotFoundException;
 import com.zosh.model.Address;
@@ -50,7 +50,7 @@ public class SellerService {
 
         Optional<Seller> seller = sellerRepo.findById(id);
         if (seller.isEmpty()) {
-            log.error(ExceptionMessages.SELLER_NOT_FOUND_ID_DEV);
+            log.error(ExceptionMessages.SELLER_NOT_FOUND_ID_DEV, id);
             throw new SellerNotFoundException(ExceptionMessages.SELLER_NOT_FOUND_USER);
         }
 
@@ -64,7 +64,7 @@ public class SellerService {
 
         Optional<Seller> seller = sellerRepo.findByEmail(email);
         if (seller.isEmpty()) {
-            log.error(ExceptionMessages.SELLER_NOT_FOUND_EMAIL_DEV);
+            log.error(ExceptionMessages.SELLER_NOT_FOUND_EMAIL_DEV, email);
             throw new SellerNotFoundException(ExceptionMessages.SELLER_NOT_FOUND_USER);
         }
 
