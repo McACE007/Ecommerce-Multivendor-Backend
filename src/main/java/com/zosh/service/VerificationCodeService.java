@@ -8,13 +8,17 @@ import com.zosh.utils.OtpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class VerificationCodeService {
     private final VerificationCodeRepo verificationCodeRepo;
 
     public VerificationCode verifyOTP(String otp) {
-        return verificationCodeRepo.findByOtp(otp).orElseThrow(() -> new InvalidOTPException(ExceptionMessages.INVALID_OTP));
+      VerificationCode verificationCode = verificationCodeRepo.findByOtp(otp).orElseThrow(() -> new InvalidOTPException(ExceptionMessages.INVALID_OTP));
+      verificationCodeRepo.delete(verificationCode);
+      return verificationCode;
     }
 
     public String generateOTP(String email) {
@@ -25,8 +29,12 @@ public class VerificationCodeService {
         return verificationCodeRepo.save(verificationCode).getOtp();
     }
 
-    public void verifyOTPWithEmail(String email) {
-        VerificationCode verificationCode = verificationCodeRepo.findByEmail(email).orElseThrow(() -> new InvalidOTPException(ExceptionMessages.INVALID_OTP));
-        verificationCodeRepo.delete(verificationCode);
+    public void verifyOTPWithEmail(String email, String otp) {
+        Optional<VerificationCode> verificationCode = verificationCodeRepo.findByEmail(email);
+
+        if (verificationCode.isEmpty() || !verificationCode.get().getOtp().equals(otp))
+            throw new InvalidOTPException(ExceptionMessages.INVALID_OTP);
+
+        verificationCode.ifPresent(verificationCodeRepo::delete);
     }
 }

@@ -20,19 +20,21 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.zosh.constants.GlobalConstants.SELLER_PREFIX;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
     private final UserRepo userRepo;
     private final SellerRepo sellerRepo;
-    private static final String SELLER_PREFIX = "seller_";
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         if (username.startsWith(SELLER_PREFIX)) {
-            Seller seller = sellerRepo.findByEmail(username).orElseThrow(() -> {
-                log.error(ExceptionMessages.SELLER_NOT_FOUND_EMAIL_DEV, username);
+            String email = username.substring(SELLER_PREFIX.length());
+            Seller seller = sellerRepo.findByEmail(email).orElseThrow(() -> {
+                log.error(ExceptionMessages.SELLER_NOT_FOUND_EMAIL_DEV, email);
                 return new SellerNotFoundException(ExceptionMessages.SELLER_NOT_FOUND_USER);
             });
             return buildUserDetails(seller.getEmail(), seller.getPassword(), seller.getRole());

@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static com.zosh.constants.GlobalConstants.SELLER_PREFIX;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,15 +46,16 @@ public class AuthService {
     private final SellerRepo sellerRepo;
     private final VerificationCodeService verificationCodeService;
 
-    private static final String SELLER_PREFIX = "seller_";
-
     public ApiResponse sentOtp(String email) throws MessagingException {
+        if (email.startsWith(SELLER_PREFIX))
+            email = email.substring(SELLER_PREFIX.length());
+
         String otp = verificationCodeService.generateOTP(email);
 
         String subject = "zosh bazaar login/signup otp";
         String text = "your login/signup otp is - ";
 
-        emailService.sendVerificationOtpEmail(email.startsWith(SELLER_PREFIX) ? email.substring(SELLER_PREFIX.length()) : email, otp, subject, text);
+        emailService.sendVerificationOtpEmail(email, otp, subject, text);
 
         return ApiResponse.builder().message("otp send successfully").build();
     }
@@ -61,16 +64,18 @@ public class AuthService {
         verificationCodeService.verifyOTP(request.getOtp());
 
         Authentication authentication = null;
+        AuthResponse response = null;
         List<GrantedAuthority> authorities = new ArrayList<>();
 
         if (request.getEmail().startsWith(SELLER_PREFIX)) {
-            sellerRepo.findByEmail(request.getEmail()).ifPresent(existingSeller -> {
+            String email = request.getEmail().substring(SELLER_PREFIX.length());
+            sellerRepo.findByEmail(email).ifPresent(existingSeller -> {
                 log.error(ExceptionMessages.SELLER_ALREADY_EXISTS_DEV, existingSeller.getEmail());
                 throw new SellerAlreadyExistsException(ExceptionMessages.SELLER_ALREADY_EXISTS_USER);
             });
 
             Seller newSeller = new Seller();
-            newSeller.setEmail(request.getEmail());
+            newSeller.setEmail(email);
             newSeller.setSellerName(request.getFullName());
             newSeller.setRole(USER_ROLE.ROLE_SELLER);
             newSeller.setMobile("2345653675");
@@ -81,8 +86,14 @@ public class AuthService {
 
             Seller savedSeller = sellerRepo.save(newSeller);
 
-            authorities.add(new SimpleGrantedAuthority(newSeller.getRole().toString()));
+            authorities.add(new SimpleGrantedAuthority(savedSeller.getRole().toString()));
             authentication = new UsernamePasswordAuthenticationToken(savedSeller.getEmail(), null, authorities);
+
+            response = AuthResponse.builder()
+                    .token(jwtService.generateToken(authentication))
+                    .message("register success")
+                    .role(USER_ROLE.ROLE_SELLER)
+                    .build();
         } else {
             userRepo.findByEmail(request.getEmail()).ifPresent(existingUser -> {
                 log.error(ExceptionMessages.USER_ALREADY_EXISTS_DEV, existingUser.getEmail());
@@ -102,15 +113,12 @@ public class AuthService {
             cartRepo.save(cart);
             authorities.add(new SimpleGrantedAuthority(newUser.getRole().toString()));
             authentication = new UsernamePasswordAuthenticationToken(newUser.getEmail(), null, authorities);
+            response = AuthResponse.builder()
+                    .token(jwtService.generateToken(authentication))
+                    .message("register success")
+                    .role(USER_ROLE.ROLE_CUSTOMER)
+                    .build();
         }
-
-        String token = jwtService.generateToken(authentication);
-
-        AuthResponse response = new AuthResponse();
-        response.setToken(token);
-        response.setMessage("register success");
-        response.setRole(USER_ROLE.ROLE_CUSTOMER);
-
         return response;
     }
 
@@ -124,12 +132,11 @@ public class AuthService {
 
         String token = jwtService.generateToken(authentication);
 
-        AuthResponse response = new AuthResponse();
-        response.setToken(token);
-        response.setMessage("login success");
-        response.setRole(USER_ROLE.valueOf(roleName));
-
-        return response;
+        return AuthResponse.builder()
+                .token(token)
+                .message("login success")
+                .role(USER_ROLE.valueOf(roleName))
+                .build();
     }
 
     private Authentication authenticate(String username, String otp) {
@@ -138,7 +145,7 @@ public class AuthService {
         if (userDetails == null)
             throw new BadCredentialsException("Invalid email");
 
-        verificationCodeService.verifyOTPWithEmail(username);
+        verificationCodeService.verifyOTPWithEmail(username, otp);
 
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
