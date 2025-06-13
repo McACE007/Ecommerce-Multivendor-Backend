@@ -113,7 +113,7 @@ public class ProductService {
         return productRepo.searchProduct(query);
     }
 
-    public Page<Product> getAllProducts(String category, String brand, String colors, String sizes, Integer minPrice, Integer maxPrice, Integer minDiscount, String sort, String stock, Integer pageNumber) {
+    public Page<Product> getAllProducts(String category, String brand, String color, String sizes, Integer minPrice, Integer maxPrice, Integer minDiscount, String sort, String stock, Integer pageNumber) {
         Specification<Product> specification = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -123,9 +123,9 @@ public class ProductService {
                 predicates.add(criteriaBuilder.equal(categoryJoin.get("categoryId"), category));
             }
 
-            if (StringUtils.hasText(colors)) {
-                log.debug("colors: {}", colors);
-                predicates.add(criteriaBuilder.equal(root.get("color"), colors));
+            if (StringUtils.hasText(color)) {
+                log.debug("colors: {}", color);
+                predicates.add(criteriaBuilder.equal(root.get("color"), color));
             }
 
             if (StringUtils.hasText(sizes)) {

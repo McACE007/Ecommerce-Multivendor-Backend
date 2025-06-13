@@ -13,4 +13,6 @@ public class ExceptionMessages {
     public final static String USER_NOT_FOUND_EMAIL_DEV = "User lookup failed: email '{}' does not exist";
     public final static String USER_ALREADY_EXISTS_DEV = "User creation failed: email '{}' already exists";
     public final static String USER_ALREADY_EXISTS_USER = "A user with this email already exists. Please use a different email";
+    public final static String CART_NOT_FOUND_USERID_DEV = "Cart lookup failed: cart for userId '{}' does not exist";
+    public final static String CART_NOT_FOUND_USER = "Cart not found";
 }

@@ -7,6 +7,7 @@ import com.zosh.repository.VerificationCodeRepo;
 import com.zosh.utils.OtpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import static com.zosh.constants.GlobalConstants.SELLER_PREFIX;
 
 import java.util.Optional;
 
@@ -30,6 +31,9 @@ public class VerificationCodeService {
     }
 
     public void verifyOTPWithEmail(String email, String otp) {
+        if(email.startsWith(SELLER_PREFIX))
+            email = email.substring(SELLER_PREFIX.length());
+
         Optional<VerificationCode> verificationCode = verificationCodeRepo.findByEmail(email);
 
         if (verificationCode.isEmpty() || !verificationCode.get().getOtp().equals(otp))

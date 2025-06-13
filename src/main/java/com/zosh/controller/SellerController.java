@@ -10,6 +10,7 @@ import com.zosh.service.SellerService;
 import com.zosh.service.VerificationCodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -38,8 +39,8 @@ public class SellerController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<Seller> getSellerByToken(@AuthenticationPrincipal UserDetails userDetails) throws SellerNotFoundException {
-        return ResponseEntity.ok(sellerService.getSellerByEmail(userDetails.getUsername()));
+    public ResponseEntity<Seller> getSellerByToken(Authentication authentication) throws SellerNotFoundException {
+        return ResponseEntity.ok(sellerService.getSellerByEmail(authentication.getName()));
     }
 
     @GetMapping
@@ -49,8 +50,8 @@ public class SellerController {
     }
 
     @PatchMapping
-    public ResponseEntity<Seller> updateSeller(@AuthenticationPrincipal UserDetails userDetails, @RequestBody Seller seller) throws SellerNotFoundException {
-        Seller sellerProfile = sellerService.getSellerByEmail(userDetails.getUsername());
+    public ResponseEntity<Seller> updateSeller(Authentication authentication, @RequestBody Seller seller) throws SellerNotFoundException {
+        Seller sellerProfile = sellerService.getSellerByEmail(authentication.getName());
         Seller updatedSeller = sellerService.updateSeller(sellerProfile.getId(), seller);
         return ResponseEntity.ok(updatedSeller);
     }

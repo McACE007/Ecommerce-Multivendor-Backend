@@ -27,7 +27,7 @@ public class JwtService {
                 .add("email", auth.getName())
                 .add("authorities", roles)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 720))
                 .and()
                 .signWith(key)
                 .compact();
